@@ -1,4 +1,3 @@
-import { Component } from 'react';
 import { Button } from './Button/Button';
 import { GlobalStyle } from './GlobalStyle';
 import { ImageGallery } from './ImageGallery/ImageGallery';
@@ -7,6 +6,8 @@ import axios from 'axios';
 import { Loader } from './Loader/Loader';
 import toast, { Toaster } from 'react-hot-toast';
 import { Modale } from './Modale/Modale';
+import { useState } from 'react';
+import { useEffect } from 'react';
 
 let fetchParams = {
   params: {
@@ -19,87 +20,81 @@ let fetchParams = {
   },
 };
 
-export class App extends Component {
-  state = {
-    images: [],
-    page: 1,
-    maxPage: 1,
-    query: '',
-    isLoading: false,
-    modalImage: null,
-  };
+export const App = () => {
+  const [images, setImages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [maxPage, setMaxPage] = useState(1);
+  const [query, setQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [modalImage, setModalImage] = useState(null);
 
-  componentDidUpdate(_, prevState) {
-    const { page, query } = this.state;
-    if (prevState.page !== page || prevState.query !== query) {
-      this.fetchImages();
-    }
-  }
-
-  changeQuery = query => {
-    this.setState({ images: [], page: 1, query: query });
-  };
-
-  changePage = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
-  };
-
-  closeModal = () => {
-    this.setState({ modalImage: null });
-  };
-
-  openModal = id => {
-    const image = this.state.images.find(image => image.id === id);
-    this.setState({ modalImage: image });
-  };
-
-  fetchImages = async () => {
-    this.setState({ isLoading: true });
-    const { page, query } = this.state;
-    fetchParams.params.q = query;
-    fetchParams.params.page = page;
-    try {
-      const response = await axios.get(`https://pixabay.com/api/`, fetchParams);
-      if (response.data.totalHits > 0) {
-        this.setState(prevState => ({
-          images: [...prevState.images, ...response.data.hits],
-          maxPage: Math.ceil(
-            response.data.totalHits / fetchParams.params.per_page
-          ),
-        }));
-      } else {
-        toast.error('Search result not successful. Please try again');
+  useEffect(() => {
+    const fetchImages = async () => {
+      setIsLoading(true);
+      fetchParams.params.q = query;
+      fetchParams.params.page = page;
+      try {
+        const response = await axios.get(
+          `https://pixabay.com/api/`,
+          fetchParams
+        );
+        if (response.data.totalHits > 0) {
+          setImages(prevState => [...prevState, ...response.data.hits]);
+          setMaxPage(
+            Math.ceil(response.data.totalHits / fetchParams.params.per_page)
+          );
+        } else {
+          toast.error('Search result not successful. Please try again');
+        }
+      } catch {
+        toast.error('Oops, something went wrong. please try again later');
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      toast.error('Oops, something went wrong. please try again later');
-    } finally {
-      this.setState({ isLoading: false });
+    };
+
+    if (query !== '') {
+      fetchImages();
     }
+  }, [page, query]);
+
+  const changeQuery = query => {
+    setQuery(query);
+    setImages([]);
+    setPage(1);
   };
 
-  render() {
-    const { images, isLoading, page, maxPage, modalImage } = this.state;
-    return (
-      <>
-        <Searchbar onSubmit={this.changeQuery} />
-        {isLoading && <Loader />}
-        {images.length > 0 && (
-          <ImageGallery images={images} onOpenModale={this.openModal} />
-        )}
-        {images.length > 0 && page < maxPage && (
-          <Button onClick={this.changePage} />
-        )}
-        {modalImage !== null && (
-          <Modale onClose={this.closeModal} image={modalImage} />
-        )}
-        <GlobalStyle />
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 5000,
-          }}
-        />
-      </>
-    );
-  }
-}
+  const changePage = () => {
+    setPage(prevState => prevState + 1);
+  };
+
+  const closeModal = () => {
+    setModalImage(null);
+  };
+
+  const openModal = id => {
+    const image = images.find(image => image.id === id);
+    setModalImage(image);
+  };
+
+  return (
+    <>
+      <Searchbar onSubmit={changeQuery} />
+      {isLoading && <Loader />}
+      {images.length > 0 && (
+        <ImageGallery images={images} onOpenModale={openModal} />
+      )}
+      {images.length > 0 && page < maxPage && <Button onClick={changePage} />}
+      {modalImage !== null && (
+        <Modale onClose={closeModal} image={modalImage} />
+      )}
+      <GlobalStyle />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 5000,
+        }}
+      />
+    </>
+  );
+};

@@ -1,43 +1,36 @@
-import { Component } from 'react';
 import { ImgModalWrap, Overlay } from './Modale.styled';
 import PropTypes from 'prop-types';
+import { useEffect } from 'react';
 
-export class Modale extends Component {
-  static propTypes = {
-    image: PropTypes.shape({
-      largeImageURL: PropTypes.string.isRequired,
-      tags: PropTypes.string.isRequired,
-    }).isRequired,
-    onClose: PropTypes.func.isRequired,
+export const Modale = ({ onClose, image: { largeImageURL, tags } }) => {
+  useEffect(() => {
+    const handleKeyup = event => {
+      if (event.code === 'Escape') onClose();
+    };
+
+    window.addEventListener('keyup', handleKeyup);
+    return () => {
+      window.removeEventListener('keyup', handleKeyup);
+    };
+  }, [onClose]);
+
+  const handleClick = event => {
+    if (event.target.tagName !== 'IMG') onClose();
   };
 
-  componentDidMount() {
-    window.addEventListener('keyup', this.handleKeyup);
-  }
+  return (
+    <Overlay onClick={handleClick}>
+      <ImgModalWrap>
+        <img src={largeImageURL} alt={tags} />
+      </ImgModalWrap>
+    </Overlay>
+  );
+};
 
-  componentWillUnmount() {
-    window.removeEventListener('keyup', this.handleKeyup);
-  }
-
-  handleKeyup = event => {
-    if (event.code === 'Escape') this.props.onClose();
-  };
-
-  handleClick = event => {
-    if (event.target.tagName !== 'IMG') this.props.onClose();
-  };
-
-  render() {
-    const {
-      image: { largeImageURL, tags },
-    } = this.props;
-
-    return (
-      <Overlay onClick={this.handleClick}>
-        <ImgModalWrap>
-          <img src={largeImageURL} alt={tags} />
-        </ImgModalWrap>
-      </Overlay>
-    );
-  }
-}
+Modale.propTypes = {
+  image: PropTypes.shape({
+    largeImageURL: PropTypes.string.isRequired,
+    tags: PropTypes.string.isRequired,
+  }).isRequired,
+  onClose: PropTypes.func.isRequired,
+};
